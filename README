@@ -1,0 +1,9 @@
+FastAPI application using alembic, sqlalchemy, pydantic
+Bank management APIs (Authorization and Authentication)
+1. user
+    a. register
+    b. login
+
+2. Employee 
+    a. add employee
+    b. see employee
