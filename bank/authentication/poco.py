@@ -1,0 +1,6 @@
+import secrets
+
+class TokenConstants:
+    SECRET_KEY = '951b74761200ba43ae624d7566eab3a1968ba370742ab94861f959d18f139ea3'
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60

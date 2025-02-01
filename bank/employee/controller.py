@@ -4,30 +4,41 @@ from .service import EmployeeService
 from fastapi.encoders import jsonable_encoder
 from .model import EmployeeRequest
 from ..exception import NotFoundException
-from ..user.utils import UserUtils
+from ..authentication.authentication import UserAuthentication
+from ..user.poco import Role
 from ..user.model import User
 
 employee_router = APIRouter()
 
-# Instantiate the classes
-
 def get_employee_service():
     return EmployeeService()
 
-def get_user_utils(required_roles=['MANAGER']):
-    def dependency(token: str = Depends(UserUtils().oauth_scheme)):
+def user_authentication(required_roles=[Role.MANAGER]):
+    def dependency(token: str = Depends(UserAuthentication().oauth_scheme)):
         print(token)
-        return UserUtils().get_current_user(required_roles=required_roles, token=token)
+        return UserAuthentication().get_current_user(required_roles=required_roles, token=token)
     return dependency
 
 @employee_router.get('/{emp_id}')
 def get_employee_by_id(
         emp_id: str, 
-        service: EmployeeService = Depends(get_employee_service), 
-        user_info: User = Depends(get_user_utils(['MANAGER']))
+        service: EmployeeService = Depends(get_employee_service),
+        manager: User = Depends(user_authentication([Role.MANAGER]))
     ):
     try:
-        resp = service.get_employee(emp_id)
+        resp = service.get_employee(emp_id, manager.id)
+        return JSONResponse(jsonable_encoder(resp), status_code=status.HTTP_200_OK)
+    except NotFoundException as e:
+        return JSONResponse(content=e.args, status_code=status.HTTP_404_NOT_FOUND)
+
+@employee_router.get('')
+def get_all_employee(
+        service: EmployeeService = Depends(get_employee_service),
+        manager: User = Depends(user_authentication([Role.MANAGER]))
+    ):
+    try:
+        print(manager.id)
+        resp = service.get_all_employee(manager.id)
         return JSONResponse(jsonable_encoder(resp), status_code=status.HTTP_200_OK)
     except NotFoundException as e:
         return JSONResponse(content=e.args, status_code=status.HTTP_404_NOT_FOUND)
@@ -36,7 +47,10 @@ def get_employee_by_id(
 def add_employee(
     body: EmployeeRequest = Body(...), 
     service: EmployeeService = Depends(get_employee_service), 
-    user_info: User = Depends(get_user_utils(['MANAGER']))
+    manager: User = Depends(user_authentication([Role.MANAGER]))
 ):
-    resp = service.add_employee(body)
-    return JSONResponse(jsonable_encoder(resp), status_code=status.HTTP_201_CREATED)
+    try:
+        resp = service.add_employee(body, manager.id)
+        return JSONResponse(jsonable_encoder(resp), status_code=status.HTTP_201_CREATED)
+    except Exception as e:
+        return JSONResponse(content=e.args, status_code=status.HTTP_404_NOT_FOUND)

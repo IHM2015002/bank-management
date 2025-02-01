@@ -1,6 +1,7 @@
-from sqlalchemy import Integer, String, Column, UUID
-from pydantic import BaseModel
-from ..db_conn import Base, engine
+from sqlalchemy import Integer, String, Column, ForeignKey
+from pydantic import BaseModel, Field, EmailStr
+from ..db_conn import Base
+from ..user.model import User
 import uuid
 
 class Employee(Base):
@@ -8,10 +9,10 @@ class Employee(Base):
 
     id = Column(String(100), default=lambda: str(uuid.uuid4()), primary_key=True)
     name = Column(String(30), nullable=False)
-    phone = Column(String(30), nullable=False)
-    email = Column(String(50), nullable=False)
+    phone = Column(String(30), nullable=False, unique=True)
+    email = Column(String(50), nullable=False, unique=True)
     designation = Column(String(30))
-    department_id = Column(Integer)
+    manager_id = Column(Integer, ForeignKey(User.id), nullable=True)
     
 
 # To create table in db if not exist but after creation model changes can not push to db table
@@ -22,15 +23,14 @@ class EmployeeResponse(BaseModel):
     emp_id: str
     name: str
     phone: str
-    email: str
+    email: EmailStr
     designation: str
-    department_id: int
+    manager_id: int
 
 class EmployeeRequest(BaseModel):
-    name: str
-    phone: str
-    email: str
+    name: str = Field(...,min_length=1)
+    phone: str = Field(..., pattern=r'^\d{10}$')
+    email: EmailStr
     designation: str
-    department_id: int
 
 

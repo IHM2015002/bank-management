@@ -1,23 +1,21 @@
 from .model import Contracts
-from fastapi.exceptions import HTTPException
-from .utils import UserUtils
+from ..authentication.authentication import UserAuthentication
 from .dal import UserDAL
 from .model import User
 from ..exception import NotFoundException, DuplicateFoundException
 from datetime import datetime
-from fastapi import Depends
 
 class UserService:
 
     def __init__(self):
         self.user_dal = UserDAL()
-        self.user_utils = UserUtils()
+        self.user_auth = UserAuthentication()
         
     def regiter(self, body: Contracts.Registration):
         user = self.user_dal.is_user_exist(body.email, body.phone)
         if user:
             raise DuplicateFoundException('user already exist')
-        hashed_password = self.user_utils.get_hashed_password(password=body.password)
+        hashed_password = self.user_auth.get_hashed_password(password=body.password)
         user = User(
             name=body.name,
             email=body.email,
@@ -41,21 +39,10 @@ class UserService:
         user = self.user_dal.is_user_exist(email=email)
         if not user:
             raise NotFoundException('Email does not exist')
-        is_authenticaed = self.user_utils.verify_password(password, user.password)
+        is_authenticaed = self.user_auth.verify_password(password, user.password)
         if not is_authenticaed:
             raise NotFoundException('Invalid credentials')
-        token = self.user_utils.create_access_token(email, str(user.role.name))
+        token = self.user_auth.create_access_token(email, user.role)
         return Contracts.LoginResponse(
             token=token
         )
-    
-
-    
-
-        
-
-
-# def user_service() -> UserService:
-#     if not hasattr(user_service, '_service'):
-#         user_service._service = UserService()
-#     return user_service._service
